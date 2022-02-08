@@ -1,0 +1,19 @@
+{
+  "products": [
+    {
+      "name": "Latte",
+      "price": "5",
+      "id": 1
+    },
+    {
+      "name": "Nutella",
+      "price": "6",
+      "id": 2
+    },
+    {
+      "name": "Pane",
+      "price": 2,
+      "id": 5
+    }
+  ]
+}

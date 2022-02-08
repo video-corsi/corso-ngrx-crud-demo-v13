@@ -1,32 +1,84 @@
 import { Component } from '@angular/core';
+import { select, Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { ProductsState } from './store/reducers/products.reducer';
+import { NgForm } from '@angular/forms';
+import { deleteProduct, loadProducts, resetActiveProduct, saveProduct, setActiveProduct } from './store/actions/products.actions';
+import { Product } from './model/product';
+import { AppState } from './app.module';
+import {
+  getTotal,
+  selectActiveProduct,
+  selectAllProducts,
+  selectAllProductsByMinPrice,
+  selectProductError
+} from './store/selectors/products.selector';
 
 @Component({
   selector: 'fb-root',
   template: `
-    <!--The content below is only a placeholder and can be replaced.-->
-    <div style="text-align:center" class="content">
-      <h1>
-        Welcome to {{title}}!
-      </h1>
-      <span style="display: block">{{ title }} app is running!</span>
-      <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
-    </div>
-    <h2>Here are some links to help you start: </h2>
-    <ul>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/cli">CLI Documentation</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-      </li>
-    </ul>
-    <router-outlet></router-outlet>
+    
+    <div 
+      *ngIf="productsError$ | async"
+      style="background-color: red; padding: 10px"
+    > SERVER ERROR</div>
+    
+    <form #f="ngForm" (ngSubmit)="saveProduct(f)">
+      <input type="text" name="name" [ngModel]="(productsActive$ | async)?.name" required>
+      <input type="number" name="price" [ngModel]="(productsActive$ | async)?.price" required>
+      <button type="submit" [disabled]="f.invalid">SAVE</button>
+      <button type="button" (click)="reset(f)">RESET</button>
+    </form>
+
+
+    <button (click)="getProductsByPrice(0)">all product</button>
+    <button (click)="getProductsByPrice(10)"> > 10 euro </button>
+
+    <hr>
+    <li
+      *ngFor="let product of (products$ | async)"
+      (click)="setActiveProduct(product)"
+      [style.color]="product.id === (productsActive$ | async)?.id ? 'orange' : null "
+    >
+      {{product.name}} - € {{ product.price}}
+
+      <button (click)="deleteProduct(product.id, $event)">delete</button>
+    </li>
+    <hr>
+    Totale: {{productsTotal$ | async}}
   `,
-  styles: []
 })
 export class AppComponent {
-  title = 'corso-ngrx-crud-demo-v13';
+  products$: Observable<Product[]> = this.store.pipe(select(selectAllProductsByMinPrice(0)));
+  productsActive$: Observable<Product> = this.store.pipe(select(selectActiveProduct));
+  productsTotal$: Observable<number> = this.store.pipe(select(getTotal));
+  productsError$: Observable<boolean> = this.store.pipe(select(selectProductError));
+
+  constructor(private store: Store<AppState>) {
+    this.store.dispatch(loadProducts());
+  }
+
+  saveProduct(form: NgForm) {
+    this.store.dispatch(saveProduct({product: form.value}));
+  }
+
+  deleteProduct(id: string | undefined, event: MouseEvent) {
+    event.stopPropagation();
+    if (id) {
+      this.store.dispatch(deleteProduct({ id }));
+    }
+  }
+
+  setActiveProduct(product: Product) {
+    this.store.dispatch(setActiveProduct({ product }));
+  }
+
+  reset(f: NgForm) {
+    this.store.dispatch(resetActiveProduct());
+    f.reset();
+  }
+
+  getProductsByPrice(value: number) {
+    this.products$ = this.store.pipe(select(selectAllProductsByMinPrice(value)))
+  }
 }
